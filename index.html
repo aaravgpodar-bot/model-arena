@@ -24,6 +24,16 @@
         </section>
 
         <section class="control-group">
+          <h2>Your prompt</h2>
+          <textarea
+            id="customPrompt"
+            rows="5"
+            placeholder="Type any prompt, then start a blind battle..."
+          ></textarea>
+          <button class="primary full-width" id="startCustom" type="button">Start battle</button>
+        </section>
+
+        <section class="control-group">
           <h2>Scoreboard</h2>
           <div class="scoreboard" id="scoreboard"></div>
         </section>
@@ -74,6 +84,14 @@
             <p id="revealDetails"></p>
           </div>
           <button class="primary" id="continueButton" type="button">Continue</button>
+        </section>
+
+        <section class="results-panel">
+          <div>
+            <p class="eyebrow">Overall results</p>
+            <h3 id="overallLine">No votes yet</h3>
+          </div>
+          <div class="results-grid" id="overallResults"></div>
         </section>
       </section>
     </main>

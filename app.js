@@ -138,11 +138,49 @@ const rounds = [
   },
 ];
 
+const modelPairs = {
+  design: ["Claude 3.5 Sonnet", "GPT-4o"],
+  terminal: ["Gemini 1.5 Pro", "Llama 3.1 70B"],
+  coding: ["DeepSeek Coder", "Mistral Large"],
+  reasoning: ["GPT-4.1", "Claude 3 Opus"],
+  writing: ["Claude 3.5 Sonnet", "Grok 2"],
+  teaching: ["GPT-4o mini", "Qwen2.5 72B"],
+};
+
+const responseStyles = {
+  design: [
+    "Start with the actual working screen, not a marketing page.\n\nRecommended structure:\n- Primary task at the top\n- Dense but readable information region\n- Clear comparison states\n- One strong action per view\n\nVisual direction: quiet, polished, fast to scan, with restrained color and enough spacing that the user does not feel lost.",
+    "Use a friendly, expressive layout with a strong headline and feature areas.\n\nRecommended structure:\n- Welcome message\n- Large visual moment\n- Feature cards\n- Suggested next actions\n\nVisual direction: warm, approachable, and easy for a first-time user to understand.",
+  ],
+  terminal: [
+    "A careful terminal answer would first identify the OS, use the native command, and include a verification step.\n\nExample approach:\n1. Run the command.\n2. Read the output.\n3. Apply the smallest safe follow-up command.\n\nAvoid destructive commands unless the user explicitly asks for them.",
+    "A concise terminal answer would give the shortest likely command and a one-line explanation.\n\nExample approach:\n- Provide the command immediately.\n- Add the key flag or column to inspect.\n- Keep extra context minimal.",
+  ],
+  coding: [
+    "A strong coding answer should include a complete, reusable snippet and one usage example.\n\nIt should handle edge cases, name variables clearly, and avoid hidden global state unless the task is tiny.",
+    "A quick coding answer should focus on the core idea first.\n\nIt should be short, readable, and easy to adapt, with just enough explanation to prevent misuse.",
+  ],
+  reasoning: [
+    "A careful reasoning answer should state assumptions, walk step by step, and call out ambiguity if the prompt is underspecified.\n\nFinal answer should be clear and separated from the reasoning path.",
+    "A fast reasoning answer should find the simplest pattern and give a direct answer.\n\nIt should avoid overexplaining unless the puzzle depends on a hidden trick.",
+  ],
+  writing: [
+    "A polished writing answer should sound natural, specific, and audience-aware.\n\nIt should avoid generic claims, keep sentences clean, and make the main point easy to repeat.",
+    "A simpler writing answer should be friendly and broad.\n\nIt should prioritize encouragement, plain language, and a positive tone over detailed nuance.",
+  ],
+  teaching: [
+    "A strong teaching answer should use a concrete analogy, then connect it back to the real concept.\n\nIt should be short enough for students to remember and include one quick check-for-understanding.",
+    "A technical teaching answer should define the concept accurately first, then add an example.\n\nIt works best for older students or learners who already know some vocabulary.",
+  ],
+};
+
 const state = {
   category: "design",
   roundIndex: 0,
   revealed: false,
   scores: JSON.parse(localStorage.getItem("arenaScores") || "{}"),
+  history: JSON.parse(localStorage.getItem("arenaHistory") || "[]"),
+  customRound: null,
 };
 
 const els = {
@@ -163,6 +201,10 @@ const els = {
   continueButton: document.querySelector("#continueButton"),
   nextRound: document.querySelector("#nextRound"),
   resetScores: document.querySelector("#resetScores"),
+  customPrompt: document.querySelector("#customPrompt"),
+  startCustom: document.querySelector("#startCustom"),
+  overallLine: document.querySelector("#overallLine"),
+  overallResults: document.querySelector("#overallResults"),
 };
 
 function filteredRounds() {
@@ -170,8 +212,34 @@ function filteredRounds() {
 }
 
 function currentRound() {
+  if (state.customRound) return state.customRound;
   const list = filteredRounds();
   return list[state.roundIndex % list.length];
+}
+
+function titleFromPrompt(prompt) {
+  const trimmed = prompt.trim().replace(/\s+/g, " ");
+  if (!trimmed) return "Custom prompt";
+  return trimmed.length > 54 ? `${trimmed.slice(0, 54)}...` : trimmed;
+}
+
+function buildCustomRound(prompt) {
+  const pair = modelPairs[state.category] || modelPairs.reasoning;
+  const styles = responseStyles[state.category] || responseStyles.reasoning;
+  return {
+    category: state.category,
+    custom: true,
+    title: titleFromPrompt(prompt),
+    prompt,
+    a: {
+      model: pair[0],
+      text: `${styles[0]}\n\nApplied to your prompt:\n${prompt}`,
+    },
+    b: {
+      model: pair[1],
+      text: `${styles[1]}\n\nApplied to your prompt:\n${prompt}`,
+    },
+  };
 }
 
 function renderCategories() {
@@ -185,9 +253,43 @@ function renderCategories() {
       state.category = category.id;
       state.roundIndex = 0;
       state.revealed = false;
+      state.customRound = null;
       render();
     });
     els.categoryGrid.append(button);
+  });
+}
+
+function renderOverallResults() {
+  const total = state.history.length;
+  els.overallResults.innerHTML = "";
+  if (!total) {
+    els.overallLine.textContent = "No votes yet";
+    return;
+  }
+
+  const modelWins = {};
+  const categoryVotes = {};
+  state.history.forEach((vote) => {
+    modelWins[vote.model] = (modelWins[vote.model] || 0) + 1;
+    categoryVotes[vote.category] = (categoryVotes[vote.category] || 0) + 1;
+  });
+
+  const leader = Object.entries(modelWins).sort((a, b) => b[1] - a[1])[0];
+  els.overallLine.textContent = `${total} total votes. Current leader: ${leader[0]} (${leader[1]} wins).`;
+
+  const blocks = [
+    ["Total votes", total],
+    ["Models voted for", Object.keys(modelWins).length],
+    ["Custom rounds", state.history.filter((vote) => vote.custom).length],
+    ["Top category", Object.entries(categoryVotes).sort((a, b) => b[1] - a[1])[0][0]],
+  ];
+
+  blocks.forEach(([label, value]) => {
+    const block = document.createElement("div");
+    block.className = "result-tile";
+    block.innerHTML = `<span>${label}</span><strong>${value}</strong>`;
+    els.overallResults.append(block);
   });
 }
 
@@ -213,7 +315,9 @@ function renderRound() {
   const round = currentRound();
   const list = filteredRounds();
   const categoryLabel = categories.find((item) => item.id === state.category).label;
-  els.roundLabel.textContent = `${categoryLabel} round ${state.roundIndex + 1} of ${list.length}`;
+  els.roundLabel.textContent = state.customRound
+    ? `${categoryLabel} custom battle`
+    : `${categoryLabel} round ${state.roundIndex + 1} of ${list.length}`;
   els.promptTitle.textContent = round.title;
   els.promptText.textContent = round.prompt;
   els.responseA.textContent = round.a.text;
@@ -236,17 +340,27 @@ function vote(side) {
   const chosen = round[side.toLowerCase()];
   const other = side === "A" ? round.b : round.a;
   state.scores[chosen.model] = (state.scores[chosen.model] || 0) + 1;
+  state.history.push({
+    model: chosen.model,
+    category: round.category,
+    custom: Boolean(round.custom),
+    prompt: round.prompt,
+    at: new Date().toISOString(),
+  });
   localStorage.setItem("arenaScores", JSON.stringify(state.scores));
+  localStorage.setItem("arenaHistory", JSON.stringify(state.history));
   state.revealed = true;
   document.querySelector(`#card${side}`).classList.add("selected");
   els.winnerLine.textContent = `You picked ${chosen.model}`;
   els.revealDetails.textContent = `The other response was from ${other.model}.`;
   renderScoreboard();
+  renderOverallResults();
   renderRound();
   document.querySelector(`#card${side}`).classList.add("selected");
 }
 
 function nextRound() {
+  state.customRound = null;
   state.roundIndex = (state.roundIndex + 1) % filteredRounds().length;
   state.revealed = false;
   render();
@@ -255,6 +369,7 @@ function nextRound() {
 function render() {
   renderCategories();
   renderScoreboard();
+  renderOverallResults();
   renderRound();
 }
 
@@ -266,8 +381,22 @@ els.nextRound.addEventListener("click", nextRound);
 els.continueButton.addEventListener("click", nextRound);
 els.resetScores.addEventListener("click", () => {
   state.scores = {};
+  state.history = [];
   localStorage.removeItem("arenaScores");
+  localStorage.removeItem("arenaHistory");
   renderScoreboard();
+  renderOverallResults();
+});
+
+els.startCustom.addEventListener("click", () => {
+  const prompt = els.customPrompt.value.trim();
+  if (!prompt) {
+    els.customPrompt.focus();
+    return;
+  }
+  state.customRound = buildCustomRound(prompt);
+  state.revealed = false;
+  render();
 });
 
 render();

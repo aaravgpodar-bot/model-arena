@@ -141,6 +141,33 @@ h1 {
   color: white;
 }
 
+.full-width {
+  width: 100%;
+  margin-top: 10px;
+}
+
+textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 118px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fffdf8;
+  font: inherit;
+  line-height: 1.45;
+}
+
+textarea::placeholder {
+  color: #bdb6aa;
+}
+
+textarea:focus {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
 .arena {
   display: flex;
   flex-direction: column;
@@ -267,6 +294,47 @@ pre {
   display: none;
 }
 
+.results-panel {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.results-panel h3 {
+  font-size: 24px;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.result-tile {
+  display: grid;
+  gap: 8px;
+  min-height: 96px;
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.result-tile span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.result-tile strong {
+  align-self: end;
+  font-size: 22px;
+}
+
 @media (max-width: 980px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -278,6 +346,10 @@ pre {
 
   .battle-grid {
     grid-template-columns: 1fr;
+  }
+
+  .results-grid {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
@@ -299,6 +371,10 @@ pre {
   }
 
   .category-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .results-grid {
     grid-template-columns: 1fr;
   }
 }
