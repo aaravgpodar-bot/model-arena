@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Model Arena</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar" aria-label="Arena controls">
+        <div>
+          <p class="eyebrow">Blind model battles</p>
+          <h1>Model Arena</h1>
+          <p class="intro">
+            Pick a skill, compare two anonymous model answers, vote for the better one,
+            then reveal who wrote what.
+          </p>
+        </div>
+
+        <section class="control-group">
+          <h2>Category</h2>
+          <div class="category-grid" id="categoryGrid"></div>
+        </section>
+
+        <section class="control-group">
+          <h2>Scoreboard</h2>
+          <div class="scoreboard" id="scoreboard"></div>
+        </section>
+
+        <div class="sidebar-actions">
+          <button class="secondary" id="resetScores" type="button">Reset scores</button>
+        </div>
+      </aside>
+
+      <section class="arena">
+        <header class="arena-top">
+          <div>
+            <p class="round-label" id="roundLabel"></p>
+            <h2 id="promptTitle"></h2>
+          </div>
+          <button class="secondary" id="nextRound" type="button">Next round</button>
+        </header>
+
+        <article class="prompt-card">
+          <span>Prompt</span>
+          <p id="promptText"></p>
+        </article>
+
+        <section class="battle-grid" aria-label="Model comparison">
+          <article class="response-card" id="cardA">
+            <div class="response-head">
+              <span class="model-mask" id="maskA">Model A</span>
+              <span class="model-name hidden" id="nameA"></span>
+            </div>
+            <pre id="responseA"></pre>
+            <button class="vote-button" data-side="A" type="button">Pick A</button>
+          </article>
+
+          <article class="response-card" id="cardB">
+            <div class="response-head">
+              <span class="model-mask" id="maskB">Model B</span>
+              <span class="model-name hidden" id="nameB"></span>
+            </div>
+            <pre id="responseB"></pre>
+            <button class="vote-button" data-side="B" type="button">Pick B</button>
+          </article>
+        </section>
+
+        <section class="reveal-panel hidden" id="revealPanel" aria-live="polite">
+          <div>
+            <p class="eyebrow">Revealed</p>
+            <h3 id="winnerLine"></h3>
+            <p id="revealDetails"></p>
+          </div>
+          <button class="primary" id="continueButton" type="button">Continue</button>
+        </section>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
