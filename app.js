@@ -6,6 +6,23 @@
   { id: "writing", label: "Writing" },
   { id: "teaching", label: "Teaching" },
 ];
+const arenaSources = [
+  {
+    name: "Arena.ai / LMArena",
+    url: "https://arena.ai/leaderboard/text",
+    note: "text arena categories and broad model coverage",
+  },
+  {
+    name: "Artificial Analysis",
+    url: "https://artificialanalysis.ai/models/capabilities/coding",
+    note: "coding and tool-style comparison signals",
+  },
+  {
+    name: "LiveBench",
+    url: "https://livebench.ai/",
+    note: "independent live model benchmark coverage",
+  },
+];
 
 const rounds = [
   {
@@ -224,6 +241,7 @@ const state = {
   history: JSON.parse(localStorage.getItem("arenaHistory") || "[]"),
   customRound: null,
   activeRound: null,
+  lastPrompt: "",
 };
 
 const els = {
@@ -246,8 +264,10 @@ const els = {
   resetScores: document.querySelector("#resetScores"),
   customPrompt: document.querySelector("#customPrompt"),
   startCustom: document.querySelector("#startCustom"),
+  samplePrompt: document.querySelector("#samplePrompt"),
   overallLine: document.querySelector("#overallLine"),
   overallResults: document.querySelector("#overallResults"),
+  sourceText: document.querySelector("#sourceText"),
 };
 
 function filteredRounds() {
@@ -257,9 +277,7 @@ function filteredRounds() {
 function currentRound() {
   if (state.customRound) return state.customRound;
   if (state.activeRound) return state.activeRound;
-  const list = filteredRounds();
-  state.activeRound = randomizeRoundModels(list[state.roundIndex % list.length]);
-  return state.activeRound;
+  return null;
 }
 
 function pickTwoModels(category, excluded = []) {
@@ -323,6 +341,24 @@ function renderCategories() {
   });
 }
 
+function samplePromptForCategory() {
+  const examples = {
+    design: "Design a first screen for a student AI tutor that helps them choose what to study next.",
+    terminal: "Give the safest Windows PowerShell steps to find and stop a local dev server running on port 3000.",
+    coding: "Write a small JavaScript function that groups an array of objects by a property name.",
+    reasoning: "Solve carefully: if three people can paint three rooms in three hours, how long do six people need to paint six rooms?",
+    writing: "Write a short parent update about students learning to compare AI answers critically.",
+    teaching: "Explain recursion to 12-year-olds with a classroom analogy and one tiny code example.",
+  };
+  return examples[state.category] || examples.reasoning;
+}
+
+function renderSourceText() {
+  els.sourceText.innerHTML = arenaSources
+    .map((source) => `<a href="${source.url}" target="_blank" rel="noreferrer">${source.name}</a>: ${source.note}`)
+    .join(" · ");
+}
+
 function renderOverallResults() {
   const total = state.history.length;
   els.overallResults.innerHTML = "";
@@ -376,11 +412,26 @@ function renderScoreboard() {
 
 function renderRound() {
   const round = currentRound();
-  const list = filteredRounds();
   const categoryLabel = categories.find((item) => item.id === state.category).label;
-  els.roundLabel.textContent = state.customRound
-    ? `${categoryLabel} custom battle`
-    : `${categoryLabel} round ${state.roundIndex + 1} of ${list.length}`;
+  if (!round) {
+    els.roundLabel.textContent = `${categoryLabel} prompt-first arena`;
+    els.promptTitle.textContent = "Enter a prompt to start";
+    els.promptText.textContent = "Choose a category, type your own prompt, then start a blind model matchup.";
+    els.responseA.textContent = "Waiting for your prompt...";
+    els.responseB.textContent = "Waiting for your prompt...";
+    els.nameA.textContent = "";
+    els.nameB.textContent = "";
+    els.nameA.classList.add("hidden");
+    els.nameB.classList.add("hidden");
+    els.revealPanel.classList.add("hidden");
+    els.cardA.classList.remove("selected");
+    els.cardB.classList.remove("selected");
+    document.querySelectorAll(".vote-button").forEach((button) => {
+      button.disabled = true;
+    });
+    return;
+  }
+  els.roundLabel.textContent = `${categoryLabel} custom matchup`;
   els.promptTitle.textContent = round.title;
   els.promptText.textContent = round.prompt;
   els.responseA.textContent = round.a.text;
@@ -400,6 +451,7 @@ function renderRound() {
 function vote(side) {
   if (state.revealed) return;
   const round = currentRound();
+  if (!round) return;
   const chosen = round[side.toLowerCase()];
   const other = side === "A" ? round.b : round.a;
   state.scores[chosen.model] = (state.scores[chosen.model] || 0) + 1;
@@ -423,9 +475,8 @@ function vote(side) {
 }
 
 function nextRound() {
-  state.customRound = null;
   state.activeRound = null;
-  state.roundIndex = (state.roundIndex + 1) % filteredRounds().length;
+  state.customRound = state.lastPrompt ? buildCustomRound(state.lastPrompt) : null;
   state.revealed = false;
   render();
 }
@@ -434,6 +485,7 @@ function render() {
   renderCategories();
   renderScoreboard();
   renderOverallResults();
+  renderSourceText();
   renderRound();
 }
 
@@ -458,11 +510,18 @@ els.startCustom.addEventListener("click", () => {
     els.customPrompt.focus();
     return;
   }
+  state.lastPrompt = prompt;
   state.customRound = buildCustomRound(prompt);
   state.activeRound = null;
   state.revealed = false;
   render();
 });
 
+els.samplePrompt.addEventListener("click", () => {
+  els.customPrompt.value = samplePromptForCategory();
+  els.customPrompt.focus();
+});
+
 render();
+
 

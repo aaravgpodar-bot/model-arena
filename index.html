@@ -13,8 +13,8 @@
           <p class="eyebrow">Blind model battles</p>
           <h1>Model Arena</h1>
           <p class="intro">
-            Pick a skill, compare two anonymous model answers, vote for the better one,
-            then reveal who wrote what.
+            Type your own prompt, compare two anonymous model-style answers,
+            vote, then reveal who wrote what.
           </p>
         </div>
 
@@ -32,6 +32,7 @@
             placeholder="Type any prompt, then start a blind battle..."
           ></textarea>
           <button class="primary full-width" id="startCustom" type="button">Start battle</button>
+          <button class="ghost full-width" id="samplePrompt" type="button">Use sample prompt</button>
         </section>
 
         <section class="control-group">
@@ -50,13 +51,18 @@
             <p class="round-label" id="roundLabel"></p>
             <h2 id="promptTitle"></h2>
           </div>
-          <button class="secondary" id="nextRound" type="button">Next round</button>
+          <button class="secondary" id="nextRound" type="button">Next matchup</button>
         </header>
 
         <article class="prompt-card">
           <span>Prompt</span>
           <p id="promptText"></p>
         </article>
+
+        <section class="source-panel">
+          <p class="eyebrow">Arena-informed pools</p>
+          <p id="sourceText"></p>
+        </section>
 
         <section class="battle-grid" aria-label="Model comparison">
           <article class="response-card" id="cardA">

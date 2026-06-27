@@ -99,6 +99,7 @@ h1 {
 .category-button,
 .secondary,
 .primary,
+.ghost,
 .vote-button {
   min-height: 44px;
   border-radius: 8px;
@@ -146,6 +147,12 @@ h1 {
   padding: 0 18px;
   background: var(--accent);
   color: white;
+}
+
+.ghost {
+  padding: 0 18px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fffdf8;
 }
 
 .full-width {
@@ -206,6 +213,24 @@ textarea:focus {
 .prompt-card p {
   font-size: 19px;
   line-height: 1.45;
+}
+
+.source-panel {
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfaf7;
+}
+
+.source-panel p:last-child {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.source-panel a {
+  color: var(--accent-strong);
+  font-weight: 800;
 }
 
 .battle-grid {
