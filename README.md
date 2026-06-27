@@ -6,6 +6,8 @@ Open `index.html` in a browser. Pick a category, compare Model A and Model B, vo
 
 You can either use the built-in sample rounds or type your own prompt. Custom prompt battles keep the model names hidden until after voting, just like the sample rounds.
 
+Each category rotates through a larger model pool so the same section does not always compare the same two competitors.
+
 ## Categories
 
 - Design

@@ -77,6 +77,13 @@ h1 {
   line-height: 1.5;
 }
 
+.helper-text {
+  margin-top: 10px;
+  color: #bdb6aa;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .control-group h2 {
   margin-bottom: 12px;
   color: #fffdf8;

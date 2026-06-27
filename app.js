@@ -138,13 +138,55 @@ const rounds = [
   },
 ];
 
-const modelPairs = {
-  design: ["Claude 3.5 Sonnet", "GPT-4o"],
-  terminal: ["Gemini 1.5 Pro", "Llama 3.1 70B"],
-  coding: ["DeepSeek Coder", "Mistral Large"],
-  reasoning: ["GPT-4.1", "Claude 3 Opus"],
-  writing: ["Claude 3.5 Sonnet", "Grok 2"],
-  teaching: ["GPT-4o mini", "Qwen2.5 72B"],
+const modelPools = {
+  design: [
+    "Claude 3.5 Sonnet",
+    "GPT-4o",
+    "Gemini 2.0 Flash",
+    "Mistral Large",
+    "Grok 2",
+    "Qwen2.5 72B",
+  ],
+  terminal: [
+    "Gemini 1.5 Pro",
+    "Llama 3.1 70B",
+    "Claude Haiku",
+    "Mistral Small",
+    "GPT-4.1",
+    "DeepSeek Coder",
+  ],
+  coding: [
+    "DeepSeek Coder",
+    "Mistral Large",
+    "GPT-4.1",
+    "Claude 3.5 Sonnet",
+    "Qwen2.5 Coder",
+    "Llama 3.1 70B",
+  ],
+  reasoning: [
+    "GPT-4.1",
+    "Claude 3 Opus",
+    "Gemini 1.5 Pro",
+    "DeepSeek R1",
+    "OpenAI o1",
+    "Qwen2.5 72B",
+  ],
+  writing: [
+    "Claude 3.5 Sonnet",
+    "Grok 2",
+    "GPT-4o",
+    "Gemini 1.5 Pro",
+    "Mistral Large",
+    "Llama 3.1 70B",
+  ],
+  teaching: [
+    "GPT-4o mini",
+    "Qwen2.5 72B",
+    "Claude Haiku",
+    "Gemini 2.0 Flash",
+    "Mistral Small",
+    "Llama 3.1 8B",
+  ],
 };
 
 const responseStyles = {
@@ -181,6 +223,7 @@ const state = {
   scores: JSON.parse(localStorage.getItem("arenaScores") || "{}"),
   history: JSON.parse(localStorage.getItem("arenaHistory") || "[]"),
   customRound: null,
+  activeRound: null,
 };
 
 const els = {
@@ -213,8 +256,27 @@ function filteredRounds() {
 
 function currentRound() {
   if (state.customRound) return state.customRound;
+  if (state.activeRound) return state.activeRound;
   const list = filteredRounds();
-  return list[state.roundIndex % list.length];
+  state.activeRound = randomizeRoundModels(list[state.roundIndex % list.length]);
+  return state.activeRound;
+}
+
+function pickTwoModels(category, excluded = []) {
+  const pool = (modelPools[category] || modelPools.reasoning).filter(
+    (model) => !excluded.includes(model),
+  );
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, 2);
+}
+
+function randomizeRoundModels(round) {
+  const [modelA, modelB] = pickTwoModels(round.category);
+  return {
+    ...round,
+    a: { ...round.a, model: modelA },
+    b: { ...round.b, model: modelB },
+  };
 }
 
 function titleFromPrompt(prompt) {
@@ -224,7 +286,7 @@ function titleFromPrompt(prompt) {
 }
 
 function buildCustomRound(prompt) {
-  const pair = modelPairs[state.category] || modelPairs.reasoning;
+  const pair = pickTwoModels(state.category);
   const styles = responseStyles[state.category] || responseStyles.reasoning;
   return {
     category: state.category,
@@ -254,6 +316,7 @@ function renderCategories() {
       state.roundIndex = 0;
       state.revealed = false;
       state.customRound = null;
+      state.activeRound = null;
       render();
     });
     els.categoryGrid.append(button);
@@ -361,6 +424,7 @@ function vote(side) {
 
 function nextRound() {
   state.customRound = null;
+  state.activeRound = null;
   state.roundIndex = (state.roundIndex + 1) % filteredRounds().length;
   state.revealed = false;
   render();
@@ -395,6 +459,7 @@ els.startCustom.addEventListener("click", () => {
     return;
   }
   state.customRound = buildCustomRound(prompt);
+  state.activeRound = null;
   state.revealed = false;
   render();
 });
