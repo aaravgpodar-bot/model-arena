@@ -10,7 +10,7 @@ const arenaSources = [
   {
     name: "Arena.ai / LMArena",
     url: "https://arena.ai/leaderboard/text",
-    note: "text arena categories and broad model coverage",
+    note: "broad public arena model coverage",
   },
   {
     name: "Artificial Analysis",
@@ -206,6 +206,12 @@ const modelPools = {
   ],
 };
 
+const allModels = [...new Map(
+  Object.values(modelPools)
+    .flat()
+    .map((model) => [model.id, model]),
+).values()];
+
 const state = {
   category: "design",
   roundIndex: 0,
@@ -259,7 +265,7 @@ function currentRound() {
 }
 
 function pickTwoModels(category, excluded = []) {
-  const pool = (modelPools[category] || modelPools.reasoning).filter(
+  const pool = allModels.filter(
     (model) => !excluded.includes(model.id),
   );
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
@@ -281,31 +287,28 @@ function titleFromPrompt(prompt) {
   return trimmed.length > 54 ? `${trimmed.slice(0, 54)}...` : trimmed;
 }
 
-function systemPromptForCategory(category) {
-  const label = categories.find((item) => item.id === category)?.label || "General";
+function systemPrompt() {
   return [
-    "You are one competitor in a blind model arena.",
-    "Your only job is to answer the user's exact prompt.",
-    `The selected arena category is ${label}, but the category is only context for evaluation.`,
-    "If the category and the prompt conflict, ignore the category and answer the prompt.",
-    "Do not explain how you would answer. Do not give meta-advice unless the user explicitly asks for advice.",
-    "Do not mention the arena, the category, hidden model names, or this instruction.",
-    "Give the best direct answer you can.",
+    "You are an assistant.",
+    "Perform the user's requested task directly.",
+    "Do not write about the topic in general.",
+    "Do not summarize, analyze, restate, or critique the prompt unless the user explicitly asks for that.",
+    "Do not say what you would do. Do it.",
+    "If the user asks for code, write code. If they ask for a command, give the command. If they ask for a design, give the design. If they ask a question, answer it.",
+    "Start immediately with the answer.",
   ].join(" ");
 }
 
 function buildUserMessage(prompt) {
   return [
-    "Answer the following prompt directly.",
-    "Everything inside <prompt> is the user's task.",
+    "Complete this task exactly as written. Do not respond with background information about the topic.",
     "",
-    "<prompt>",
+    "TASK:",
     prompt,
-    "</prompt>",
   ].join("\n");
 }
 
-async function callOpenRouter(model, prompt, category, apiKey) {
+async function callOpenRouter(model, prompt, apiKey) {
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -317,10 +320,10 @@ async function callOpenRouter(model, prompt, category, apiKey) {
     body: JSON.stringify({
       model: model.id,
       messages: [
-        { role: "system", content: systemPromptForCategory(category) },
+        { role: "system", content: systemPrompt() },
         { role: "user", content: buildUserMessage(prompt) },
       ],
-      temperature: 0.45,
+      temperature: 0.25,
       max_tokens: 900,
     }),
   });
@@ -336,7 +339,7 @@ async function callOpenRouter(model, prompt, category, apiKey) {
 
 function loadingRound(prompt, pair) {
   return {
-    category: state.category,
+    category: "prompt",
     custom: true,
     title: titleFromPrompt(prompt),
     prompt,
@@ -346,7 +349,7 @@ function loadingRound(prompt, pair) {
 }
 
 async function buildCustomRound(prompt) {
-  const pair = pickTwoModels(state.category);
+  const pair = pickTwoModels();
   const apiKey = els.apiKey.value.trim();
   if (!apiKey) {
     throw new Error("Add an OpenRouter API key first.");
@@ -357,12 +360,12 @@ async function buildCustomRound(prompt) {
   renderRound();
 
   const [answerA, answerB] = await Promise.all([
-    callOpenRouter(pair[0], prompt, state.category, apiKey),
-    callOpenRouter(pair[1], prompt, state.category, apiKey),
+    callOpenRouter(pair[0], prompt, apiKey),
+    callOpenRouter(pair[1], prompt, apiKey),
   ]);
 
   return {
-    category: state.category,
+    category: "prompt",
     custom: true,
     title: titleFromPrompt(prompt),
     prompt,
@@ -378,34 +381,10 @@ async function buildCustomRound(prompt) {
 }
 
 function renderCategories() {
-  els.categoryGrid.innerHTML = "";
-  categories.forEach((category) => {
-    const button = document.createElement("button");
-    button.className = `category-button${category.id === state.category ? " active" : ""}`;
-    button.type = "button";
-    button.textContent = category.label;
-    button.addEventListener("click", () => {
-      state.category = category.id;
-      state.roundIndex = 0;
-      state.revealed = false;
-      state.customRound = null;
-      state.activeRound = null;
-      render();
-    });
-    els.categoryGrid.append(button);
-  });
 }
 
-function samplePromptForCategory() {
-  const examples = {
-    design: "Design a first screen for a student AI tutor that helps them choose what to study next.",
-    terminal: "Give the safest Windows PowerShell steps to find and stop a local dev server running on port 3000.",
-    coding: "Write a small JavaScript function that groups an array of objects by a property name.",
-    reasoning: "Solve carefully: if three people can paint three rooms in three hours, how long do six people need to paint six rooms?",
-    writing: "Write a short parent update about students learning to compare AI answers critically.",
-    teaching: "Explain recursion to 12-year-olds with a classroom analogy and one tiny code example.",
-  };
-  return examples[state.category] || examples.reasoning;
+function samplePrompt() {
+  return "Write a clear 5-step plan for launching a student AI club at school, including one activity for the first meeting.";
 }
 
 function renderSourceText() {
@@ -423,10 +402,8 @@ function renderOverallResults() {
   }
 
   const modelWins = {};
-  const categoryVotes = {};
   state.history.forEach((vote) => {
     modelWins[vote.model] = (modelWins[vote.model] || 0) + 1;
-    categoryVotes[vote.category] = (categoryVotes[vote.category] || 0) + 1;
   });
 
   const leader = Object.entries(modelWins).sort((a, b) => b[1] - a[1])[0];
@@ -435,8 +412,8 @@ function renderOverallResults() {
   const blocks = [
     ["Total votes", total],
     ["Models voted for", Object.keys(modelWins).length],
-    ["Custom rounds", state.history.filter((vote) => vote.custom).length],
-    ["Top category", Object.entries(categoryVotes).sort((a, b) => b[1] - a[1])[0][0]],
+    ["Prompt battles", state.history.filter((vote) => vote.custom).length],
+    ["Model pool", allModels.length],
   ];
 
   blocks.forEach(([label, value]) => {
@@ -467,11 +444,10 @@ function renderScoreboard() {
 
 function renderRound() {
   const round = currentRound();
-  const categoryLabel = categories.find((item) => item.id === state.category).label;
   if (!round) {
-    els.roundLabel.textContent = `${categoryLabel} prompt-first arena`;
+    els.roundLabel.textContent = "Prompt-first arena";
     els.promptTitle.textContent = "Enter a prompt to start";
-    els.promptText.textContent = "Choose a category, type your own prompt, then start a blind model matchup.";
+    els.promptText.textContent = "Type your prompt, run a blind model matchup, then compare the results.";
     els.promptMeta.textContent = "";
     els.responseA.textContent = "Waiting for your prompt...";
     els.responseB.textContent = "Waiting for your prompt...";
@@ -487,7 +463,7 @@ function renderRound() {
     });
     return;
   }
-  els.roundLabel.textContent = `${categoryLabel} custom matchup`;
+  els.roundLabel.textContent = "Prompt matchup";
   els.promptTitle.textContent = round.title;
   els.promptText.textContent = round.prompt;
   els.promptMeta.textContent = round.failed
@@ -518,7 +494,6 @@ function vote(side) {
   state.scores[chosen.model] = (state.scores[chosen.model] || 0) + 1;
   state.history.push({
     model: chosen.model,
-    category: round.category,
     custom: Boolean(round.custom),
     prompt: round.prompt,
     at: new Date().toISOString(),
@@ -549,7 +524,7 @@ async function nextRound() {
     state.customRound = await buildCustomRound(state.lastPrompt);
   } catch (error) {
     state.customRound = {
-      category: state.category,
+      category: "prompt",
       custom: true,
       failed: true,
       title: "Model call failed",
@@ -604,7 +579,7 @@ els.startCustom.addEventListener("click", async () => {
     state.customRound = await buildCustomRound(prompt);
   } catch (error) {
     state.customRound = {
-      category: state.category,
+      category: "prompt",
       custom: true,
       failed: true,
       title: "Model call failed",
@@ -619,7 +594,7 @@ els.startCustom.addEventListener("click", async () => {
 });
 
 els.samplePrompt.addEventListener("click", () => {
-  els.customPrompt.value = samplePromptForCategory();
+  els.customPrompt.value = samplePrompt();
   els.customPrompt.focus();
 });
 
