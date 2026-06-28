@@ -25,15 +25,7 @@
             rows="5"
             placeholder="Type any prompt, then start a blind battle..."
           ></textarea>
-          <button class="primary full-width" id="startCustom" type="button">Run real model battle</button>
-          <button class="ghost full-width" id="samplePrompt" type="button">Use sample prompt</button>
-        </section>
-
-        <section class="control-group">
-          <h2>API key</h2>
-          <input id="apiKey" type="password" placeholder="OpenRouter API key" autocomplete="off" />
-          <p class="helper-text">Stored only in this browser. Public sites cannot safely include a shared secret.</p>
-          <p class="helper-text status-text" id="apiStatus"></p>
+          <button class="primary full-width" id="startCustom" type="button">Run battle</button>
         </section>
 
         <section class="control-group">
@@ -60,11 +52,6 @@
           <p id="promptText"></p>
           <small id="promptMeta"></small>
         </article>
-
-        <section class="source-panel">
-          <p class="eyebrow">Model pool sources</p>
-          <p id="sourceText"></p>
-        </section>
 
         <section class="battle-grid" aria-label="Model comparison">
           <article class="response-card" id="cardA">
