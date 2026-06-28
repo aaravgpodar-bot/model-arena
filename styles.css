@@ -232,6 +232,14 @@ input:focus {
   line-height: 1.45;
 }
 
+.prompt-card small {
+  display: block;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .source-panel {
   padding: 16px 18px;
   border: 1px solid var(--line);

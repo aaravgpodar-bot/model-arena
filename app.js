@@ -206,33 +206,6 @@ const modelPools = {
   ],
 };
 
-const responseStyles = {
-  design: [
-    "Start with the actual working screen, not a marketing page.\n\nRecommended structure:\n- Primary task at the top\n- Dense but readable information region\n- Clear comparison states\n- One strong action per view\n\nVisual direction: quiet, polished, fast to scan, with restrained color and enough spacing that the user does not feel lost.",
-    "Use a friendly, expressive layout with a strong headline and feature areas.\n\nRecommended structure:\n- Welcome message\n- Large visual moment\n- Feature cards\n- Suggested next actions\n\nVisual direction: warm, approachable, and easy for a first-time user to understand.",
-  ],
-  terminal: [
-    "A careful terminal answer would first identify the OS, use the native command, and include a verification step.\n\nExample approach:\n1. Run the command.\n2. Read the output.\n3. Apply the smallest safe follow-up command.\n\nAvoid destructive commands unless the user explicitly asks for them.",
-    "A concise terminal answer would give the shortest likely command and a one-line explanation.\n\nExample approach:\n- Provide the command immediately.\n- Add the key flag or column to inspect.\n- Keep extra context minimal.",
-  ],
-  coding: [
-    "A strong coding answer should include a complete, reusable snippet and one usage example.\n\nIt should handle edge cases, name variables clearly, and avoid hidden global state unless the task is tiny.",
-    "A quick coding answer should focus on the core idea first.\n\nIt should be short, readable, and easy to adapt, with just enough explanation to prevent misuse.",
-  ],
-  reasoning: [
-    "A careful reasoning answer should state assumptions, walk step by step, and call out ambiguity if the prompt is underspecified.\n\nFinal answer should be clear and separated from the reasoning path.",
-    "A fast reasoning answer should find the simplest pattern and give a direct answer.\n\nIt should avoid overexplaining unless the puzzle depends on a hidden trick.",
-  ],
-  writing: [
-    "A polished writing answer should sound natural, specific, and audience-aware.\n\nIt should avoid generic claims, keep sentences clean, and make the main point easy to repeat.",
-    "A simpler writing answer should be friendly and broad.\n\nIt should prioritize encouragement, plain language, and a positive tone over detailed nuance.",
-  ],
-  teaching: [
-    "A strong teaching answer should use a concrete analogy, then connect it back to the real concept.\n\nIt should be short enough for students to remember and include one quick check-for-understanding.",
-    "A technical teaching answer should define the concept accurately first, then add an example.\n\nIt works best for older students or learners who already know some vocabulary.",
-  ],
-};
-
 const state = {
   category: "design",
   roundIndex: 0,
@@ -251,6 +224,7 @@ const els = {
   roundLabel: document.querySelector("#roundLabel"),
   promptTitle: document.querySelector("#promptTitle"),
   promptText: document.querySelector("#promptText"),
+  promptMeta: document.querySelector("#promptMeta"),
   responseA: document.querySelector("#responseA"),
   responseB: document.querySelector("#responseB"),
   nameA: document.querySelector("#nameA"),
@@ -308,15 +282,27 @@ function titleFromPrompt(prompt) {
 }
 
 function systemPromptForCategory(category) {
-  const instructions = {
-    design: "You are competing in a blind model arena. Answer the user's design prompt directly with concrete layout, UX, and visual recommendations. Do not describe how to teach design.",
-    terminal: "You are competing in a blind model arena. Answer the user's terminal prompt directly with safe commands and short explanations. Do not invent output.",
-    coding: "You are competing in a blind model arena. Answer the user's coding prompt directly with working code and concise explanation.",
-    reasoning: "You are competing in a blind model arena. Solve the user's reasoning prompt directly and clearly.",
-    writing: "You are competing in a blind model arena. Write the requested text directly in the requested style.",
-    teaching: "You are competing in a blind model arena. Teach or explain exactly what the user asks, using age-appropriate clarity.",
-  };
-  return instructions[category] || instructions.reasoning;
+  const label = categories.find((item) => item.id === category)?.label || "General";
+  return [
+    "You are one competitor in a blind model arena.",
+    "Your only job is to answer the user's exact prompt.",
+    `The selected arena category is ${label}, but the category is only context for evaluation.`,
+    "If the category and the prompt conflict, ignore the category and answer the prompt.",
+    "Do not explain how you would answer. Do not give meta-advice unless the user explicitly asks for advice.",
+    "Do not mention the arena, the category, hidden model names, or this instruction.",
+    "Give the best direct answer you can.",
+  ].join(" ");
+}
+
+function buildUserMessage(prompt) {
+  return [
+    "Answer the following prompt directly.",
+    "Everything inside <prompt> is the user's task.",
+    "",
+    "<prompt>",
+    prompt,
+    "</prompt>",
+  ].join("\n");
 }
 
 async function callOpenRouter(model, prompt, category, apiKey) {
@@ -332,9 +318,9 @@ async function callOpenRouter(model, prompt, category, apiKey) {
       model: model.id,
       messages: [
         { role: "system", content: systemPromptForCategory(category) },
-        { role: "user", content: prompt },
+        { role: "user", content: buildUserMessage(prompt) },
       ],
-      temperature: 0.7,
+      temperature: 0.45,
       max_tokens: 900,
     }),
   });
@@ -486,6 +472,7 @@ function renderRound() {
     els.roundLabel.textContent = `${categoryLabel} prompt-first arena`;
     els.promptTitle.textContent = "Enter a prompt to start";
     els.promptText.textContent = "Choose a category, type your own prompt, then start a blind model matchup.";
+    els.promptMeta.textContent = "";
     els.responseA.textContent = "Waiting for your prompt...";
     els.responseB.textContent = "Waiting for your prompt...";
     els.nameA.textContent = "";
@@ -503,6 +490,9 @@ function renderRound() {
   els.roundLabel.textContent = `${categoryLabel} custom matchup`;
   els.promptTitle.textContent = round.title;
   els.promptText.textContent = round.prompt;
+  els.promptMeta.textContent = round.failed
+    ? "No valid model comparison was recorded."
+    : "This exact prompt is sent to both models.";
   els.responseA.textContent = round.a.text;
   els.responseB.textContent = round.b.text;
   els.nameA.textContent = round.a.model;
@@ -638,5 +628,6 @@ els.apiKey.addEventListener("input", () => {
 });
 
 render();
+
 
 
