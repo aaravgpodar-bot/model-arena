@@ -157,52 +157,52 @@ const rounds = [
 
 const modelPools = {
   design: [
-    "Claude 3.5 Sonnet",
-    "GPT-4o",
-    "Gemini 2.0 Flash",
-    "Mistral Large",
-    "Grok 2",
-    "Qwen2.5 72B",
+    { name: "Claude 3.5 Sonnet", id: "anthropic/claude-3.5-sonnet" },
+    { name: "GPT-4o mini", id: "openai/gpt-4o-mini" },
+    { name: "Gemini 2.0 Flash", id: "google/gemini-2.0-flash-001" },
+    { name: "Mistral Large", id: "mistralai/mistral-large" },
+    { name: "Llama 3.1 70B", id: "meta-llama/llama-3.1-70b-instruct" },
+    { name: "Qwen2.5 72B", id: "qwen/qwen-2.5-72b-instruct" },
   ],
   terminal: [
-    "Gemini 1.5 Pro",
-    "Llama 3.1 70B",
-    "Claude Haiku",
-    "Mistral Small",
-    "GPT-4.1",
-    "DeepSeek Coder",
+    { name: "Gemini 2.0 Flash", id: "google/gemini-2.0-flash-001" },
+    { name: "Llama 3.1 70B", id: "meta-llama/llama-3.1-70b-instruct" },
+    { name: "Claude 3 Haiku", id: "anthropic/claude-3-haiku" },
+    { name: "Mistral Large", id: "mistralai/mistral-large" },
+    { name: "GPT-4o mini", id: "openai/gpt-4o-mini" },
+    { name: "DeepSeek Chat", id: "deepseek/deepseek-chat" },
   ],
   coding: [
-    "DeepSeek Coder",
-    "Mistral Large",
-    "GPT-4.1",
-    "Claude 3.5 Sonnet",
-    "Qwen2.5 Coder",
-    "Llama 3.1 70B",
+    { name: "DeepSeek Chat", id: "deepseek/deepseek-chat" },
+    { name: "Mistral Large", id: "mistralai/mistral-large" },
+    { name: "GPT-4o mini", id: "openai/gpt-4o-mini" },
+    { name: "Claude 3.5 Sonnet", id: "anthropic/claude-3.5-sonnet" },
+    { name: "Qwen2.5 Coder", id: "qwen/qwen-2.5-coder-32b-instruct" },
+    { name: "Llama 3.1 70B", id: "meta-llama/llama-3.1-70b-instruct" },
   ],
   reasoning: [
-    "GPT-4.1",
-    "Claude 3 Opus",
-    "Gemini 1.5 Pro",
-    "DeepSeek R1",
-    "OpenAI o1",
-    "Qwen2.5 72B",
+    { name: "GPT-4o mini", id: "openai/gpt-4o-mini" },
+    { name: "Claude 3.5 Sonnet", id: "anthropic/claude-3.5-sonnet" },
+    { name: "Gemini 2.0 Flash", id: "google/gemini-2.0-flash-001" },
+    { name: "DeepSeek Chat", id: "deepseek/deepseek-chat" },
+    { name: "Mistral Large", id: "mistralai/mistral-large" },
+    { name: "Qwen2.5 72B", id: "qwen/qwen-2.5-72b-instruct" },
   ],
   writing: [
-    "Claude 3.5 Sonnet",
-    "Grok 2",
-    "GPT-4o",
-    "Gemini 1.5 Pro",
-    "Mistral Large",
-    "Llama 3.1 70B",
+    { name: "Claude 3.5 Sonnet", id: "anthropic/claude-3.5-sonnet" },
+    { name: "GPT-4o mini", id: "openai/gpt-4o-mini" },
+    { name: "Gemini 2.0 Flash", id: "google/gemini-2.0-flash-001" },
+    { name: "Mistral Large", id: "mistralai/mistral-large" },
+    { name: "Llama 3.1 70B", id: "meta-llama/llama-3.1-70b-instruct" },
+    { name: "Qwen2.5 72B", id: "qwen/qwen-2.5-72b-instruct" },
   ],
   teaching: [
-    "GPT-4o mini",
-    "Qwen2.5 72B",
-    "Claude Haiku",
-    "Gemini 2.0 Flash",
-    "Mistral Small",
-    "Llama 3.1 8B",
+    { name: "GPT-4o mini", id: "openai/gpt-4o-mini" },
+    { name: "Qwen2.5 72B", id: "qwen/qwen-2.5-72b-instruct" },
+    { name: "Claude 3 Haiku", id: "anthropic/claude-3-haiku" },
+    { name: "Gemini 2.0 Flash", id: "google/gemini-2.0-flash-001" },
+    { name: "Mistral Large", id: "mistralai/mistral-large" },
+    { name: "Llama 3.1 70B", id: "meta-llama/llama-3.1-70b-instruct" },
   ],
 };
 
@@ -242,6 +242,7 @@ const state = {
   customRound: null,
   activeRound: null,
   lastPrompt: "",
+  loading: false,
 };
 
 const els = {
@@ -265,10 +266,13 @@ const els = {
   customPrompt: document.querySelector("#customPrompt"),
   startCustom: document.querySelector("#startCustom"),
   samplePrompt: document.querySelector("#samplePrompt"),
+  apiKey: document.querySelector("#apiKey"),
   overallLine: document.querySelector("#overallLine"),
   overallResults: document.querySelector("#overallResults"),
   sourceText: document.querySelector("#sourceText"),
 };
+
+els.apiKey.value = localStorage.getItem("openRouterKey") || "";
 
 function filteredRounds() {
   return rounds.filter((round) => round.category === state.category);
@@ -282,7 +286,7 @@ function currentRound() {
 
 function pickTwoModels(category, excluded = []) {
   const pool = (modelPools[category] || modelPools.reasoning).filter(
-    (model) => !excluded.includes(model),
+    (model) => !excluded.includes(model.id),
   );
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, 2);
@@ -303,21 +307,86 @@ function titleFromPrompt(prompt) {
   return trimmed.length > 54 ? `${trimmed.slice(0, 54)}...` : trimmed;
 }
 
-function buildCustomRound(prompt) {
+function systemPromptForCategory(category) {
+  const instructions = {
+    design: "You are competing in a blind model arena. Answer the user's design prompt directly with concrete layout, UX, and visual recommendations. Do not describe how to teach design.",
+    terminal: "You are competing in a blind model arena. Answer the user's terminal prompt directly with safe commands and short explanations. Do not invent output.",
+    coding: "You are competing in a blind model arena. Answer the user's coding prompt directly with working code and concise explanation.",
+    reasoning: "You are competing in a blind model arena. Solve the user's reasoning prompt directly and clearly.",
+    writing: "You are competing in a blind model arena. Write the requested text directly in the requested style.",
+    teaching: "You are competing in a blind model arena. Teach or explain exactly what the user asks, using age-appropriate clarity.",
+  };
+  return instructions[category] || instructions.reasoning;
+}
+
+async function callOpenRouter(model, prompt, category, apiKey) {
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": window.location.href,
+      "X-Title": "Model Arena",
+    },
+    body: JSON.stringify({
+      model: model.id,
+      messages: [
+        { role: "system", content: systemPromptForCategory(category) },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.7,
+      max_tokens: 900,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`${model.name} failed: ${response.status} ${errorText.slice(0, 180)}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content?.trim() || "(No response text returned.)";
+}
+
+function loadingRound(prompt, pair) {
+  return {
+    category: state.category,
+    custom: true,
+    title: titleFromPrompt(prompt),
+    prompt,
+    a: { model: pair[0].name, text: "Model A is responding..." },
+    b: { model: pair[1].name, text: "Model B is responding..." },
+  };
+}
+
+async function buildCustomRound(prompt) {
   const pair = pickTwoModels(state.category);
-  const styles = responseStyles[state.category] || responseStyles.reasoning;
+  const apiKey = els.apiKey.value.trim();
+  if (!apiKey) {
+    throw new Error("Add an OpenRouter API key first.");
+  }
+  localStorage.setItem("openRouterKey", apiKey);
+
+  state.customRound = loadingRound(prompt, pair);
+  renderRound();
+
+  const [answerA, answerB] = await Promise.all([
+    callOpenRouter(pair[0], prompt, state.category, apiKey),
+    callOpenRouter(pair[1], prompt, state.category, apiKey),
+  ]);
+
   return {
     category: state.category,
     custom: true,
     title: titleFromPrompt(prompt),
     prompt,
     a: {
-      model: pair[0],
-      text: `${styles[0]}\n\nApplied to your prompt:\n${prompt}`,
+      model: pair[0].name,
+      text: answerA,
     },
     b: {
-      model: pair[1],
-      text: `${styles[1]}\n\nApplied to your prompt:\n${prompt}`,
+      model: pair[1].name,
+      text: answerB,
     },
   };
 }
@@ -444,8 +513,10 @@ function renderRound() {
   els.cardA.classList.remove("selected");
   els.cardB.classList.remove("selected");
   document.querySelectorAll(".vote-button").forEach((button) => {
-    button.disabled = state.revealed;
+    button.disabled = state.revealed || state.loading || Boolean(round.failed);
   });
+  els.startCustom.disabled = state.loading;
+  els.nextRound.disabled = state.loading;
 }
 
 function vote(side) {
@@ -474,11 +545,32 @@ function vote(side) {
   document.querySelector(`#card${side}`).classList.add("selected");
 }
 
-function nextRound() {
+async function nextRound() {
   state.activeRound = null;
-  state.customRound = state.lastPrompt ? buildCustomRound(state.lastPrompt) : null;
+  if (!state.lastPrompt) {
+    state.customRound = null;
+    state.revealed = false;
+    render();
+    return;
+  }
   state.revealed = false;
-  render();
+  state.loading = true;
+  try {
+    state.customRound = await buildCustomRound(state.lastPrompt);
+  } catch (error) {
+    state.customRound = {
+      category: state.category,
+      custom: true,
+      failed: true,
+      title: "Model call failed",
+      prompt: state.lastPrompt,
+      a: { model: "Model A", text: error.message },
+      b: { model: "Model B", text: "Check your API key, credits, network access, or selected provider models." },
+    };
+  } finally {
+    state.loading = false;
+    render();
+  }
 }
 
 function render() {
@@ -493,8 +585,12 @@ document.querySelectorAll(".vote-button").forEach((button) => {
   button.addEventListener("click", () => vote(button.dataset.side));
 });
 
-els.nextRound.addEventListener("click", nextRound);
-els.continueButton.addEventListener("click", nextRound);
+els.nextRound.addEventListener("click", () => {
+  nextRound();
+});
+els.continueButton.addEventListener("click", () => {
+  nextRound();
+});
 els.resetScores.addEventListener("click", () => {
   state.scores = {};
   state.history = [];
@@ -504,22 +600,41 @@ els.resetScores.addEventListener("click", () => {
   renderOverallResults();
 });
 
-els.startCustom.addEventListener("click", () => {
+els.startCustom.addEventListener("click", async () => {
   const prompt = els.customPrompt.value.trim();
   if (!prompt) {
     els.customPrompt.focus();
     return;
   }
   state.lastPrompt = prompt;
-  state.customRound = buildCustomRound(prompt);
   state.activeRound = null;
   state.revealed = false;
-  render();
+  state.loading = true;
+  try {
+    state.customRound = await buildCustomRound(prompt);
+  } catch (error) {
+    state.customRound = {
+      category: state.category,
+      custom: true,
+      failed: true,
+      title: "Model call failed",
+      prompt,
+      a: { model: "Model A", text: error.message },
+      b: { model: "Model B", text: "Add a valid OpenRouter key and try again." },
+    };
+  } finally {
+    state.loading = false;
+    render();
+  }
 });
 
 els.samplePrompt.addEventListener("click", () => {
   els.customPrompt.value = samplePromptForCategory();
   els.customPrompt.focus();
+});
+
+els.apiKey.addEventListener("input", () => {
+  localStorage.setItem("openRouterKey", els.apiKey.value.trim());
 });
 
 render();

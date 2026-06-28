@@ -31,8 +31,14 @@
             rows="5"
             placeholder="Type any prompt, then start a blind battle..."
           ></textarea>
-          <button class="primary full-width" id="startCustom" type="button">Start battle</button>
+          <button class="primary full-width" id="startCustom" type="button">Run real model battle</button>
           <button class="ghost full-width" id="samplePrompt" type="button">Use sample prompt</button>
+        </section>
+
+        <section class="control-group">
+          <h2>API key</h2>
+          <input id="apiKey" type="password" placeholder="OpenRouter API key" autocomplete="off" />
+          <p class="helper-text">Stored only in this browser. Public sites cannot safely include a shared secret.</p>
         </section>
 
         <section class="control-group">

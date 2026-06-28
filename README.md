@@ -16,7 +16,9 @@ The category names and model pools are informed by public arenas and leaderboard
 - Artificial Analysis coding capabilities: https://artificialanalysis.ai/models/capabilities/coding
 - LiveBench: https://livebench.ai/
 
-This static version does not fetch live rankings or call real model APIs. It uses local model-style response patterns for the blind comparison experience.
+This static version does not include a shared server key. To make the models actually answer prompts, paste your own OpenRouter API key into the app. The key is stored only in your browser local storage and is used directly from the page to call OpenRouter's chat completions endpoint.
+
+Because this is a public GitHub Pages site, do not hard-code a private API key into the repository.
 
 ## Categories
 
