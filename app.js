@@ -247,12 +247,22 @@ const els = {
   startCustom: document.querySelector("#startCustom"),
   samplePrompt: document.querySelector("#samplePrompt"),
   apiKey: document.querySelector("#apiKey"),
+  apiStatus: document.querySelector("#apiStatus"),
   overallLine: document.querySelector("#overallLine"),
   overallResults: document.querySelector("#overallResults"),
   sourceText: document.querySelector("#sourceText"),
 };
 
 els.apiKey.value = localStorage.getItem("openRouterKey") || "";
+
+function apiKeyValue() {
+  return els.apiKey.value.trim();
+}
+
+function setApiStatus(message = "", isError = false) {
+  els.apiStatus.textContent = message;
+  els.apiStatus.classList.toggle("error", isError);
+}
 
 function filteredRounds() {
   return rounds.filter((round) => round.category === state.category);
@@ -350,7 +360,7 @@ function loadingRound(prompt, pair) {
 
 async function buildCustomRound(prompt) {
   const pair = pickTwoModels();
-  const apiKey = els.apiKey.value.trim();
+  const apiKey = apiKeyValue();
   if (!apiKey) {
     throw new Error("Add an OpenRouter API key first.");
   }
@@ -518,11 +528,20 @@ async function nextRound() {
     render();
     return;
   }
+  if (!apiKeyValue()) {
+    setApiStatus("Paste an OpenRouter API key before running a real matchup.", true);
+    els.apiKey.focus();
+    state.customRound = null;
+    state.revealed = false;
+    render();
+    return;
+  }
   state.revealed = false;
   state.loading = true;
   try {
     state.customRound = await buildCustomRound(state.lastPrompt);
   } catch (error) {
+    setApiStatus("Model call failed. Check the key, credits, and model access.", true);
     state.customRound = {
       category: "prompt",
       custom: true,
@@ -571,6 +590,15 @@ els.startCustom.addEventListener("click", async () => {
     els.customPrompt.focus();
     return;
   }
+  if (!apiKeyValue()) {
+    setApiStatus("Paste an OpenRouter API key before running a real matchup.", true);
+    els.apiKey.focus();
+    state.customRound = null;
+    state.revealed = false;
+    render();
+    return;
+  }
+  setApiStatus("Running both models...", false);
   state.lastPrompt = prompt;
   state.activeRound = null;
   state.revealed = false;
@@ -578,6 +606,7 @@ els.startCustom.addEventListener("click", async () => {
   try {
     state.customRound = await buildCustomRound(prompt);
   } catch (error) {
+    setApiStatus("Model call failed. Check the key, credits, and model access.", true);
     state.customRound = {
       category: "prompt",
       custom: true,
@@ -589,6 +618,9 @@ els.startCustom.addEventListener("click", async () => {
     };
   } finally {
     state.loading = false;
+    if (!state.customRound?.failed) {
+      setApiStatus("Model responses loaded.", false);
+    }
     render();
   }
 });
@@ -599,7 +631,8 @@ els.samplePrompt.addEventListener("click", () => {
 });
 
 els.apiKey.addEventListener("input", () => {
-  localStorage.setItem("openRouterKey", els.apiKey.value.trim());
+  localStorage.setItem("openRouterKey", apiKeyValue());
+  setApiStatus(apiKeyValue() ? "API key saved in this browser." : "", false);
 });
 
 render();

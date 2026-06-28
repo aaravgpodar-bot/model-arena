@@ -84,6 +84,15 @@ h1 {
   line-height: 1.4;
 }
 
+.status-text {
+  min-height: 18px;
+  font-weight: 800;
+}
+
+.status-text.error {
+  color: #ffb4a3;
+}
+
 .control-group h2 {
   margin-bottom: 12px;
   color: #fffdf8;
